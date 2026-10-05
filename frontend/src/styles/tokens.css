@@ -1,0 +1,86 @@
+/* ---------------------------------------------------------------------
+   CA-RAG design tokens.
+   Neutral warm-grey surfaces, charcoal text, one restrained teal accent
+   reserved for verification. Semantic colours (good / warn / bad) mirror
+   the backend's answer status. Dark theme is [data-theme="dark"].
+--------------------------------------------------------------------- */
+:root {
+  --bg: #f7f6f3;
+  --surface: #ffffff;
+  --surface-2: #f1f0ec;
+  --sidebar: #f2f1ed;
+  --hover: rgba(31, 31, 29, 0.05);
+  --active: rgba(31, 31, 29, 0.09);
+
+  --text: #1f1f1d;
+  --text-2: #5c5b56;
+  --text-3: #74736c;
+
+  --border: #e4e2dc;
+  --border-strong: #d2cfc7;
+
+  --accent: #1f7a6a;
+  --accent-strong: #175f52;
+  --accent-soft: #e3f1ed;
+
+  --good: #2b7a56;
+  --good-soft: #e2f1e9;
+  --warn: #93600f;
+  --warn-soft: #f6ecd8;
+  --bad: #b0362f;
+  --bad-soft: #f8e4e1;
+
+  --shadow-sm: 0 1px 2px rgba(20, 20, 18, 0.05);
+  --shadow-md: 0 8px 24px rgba(20, 20, 18, 0.1);
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 60px;
+  --header-h: 52px;
+  --content-w: 760px;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #1a1b1d;
+  --surface: #232427;
+  --surface-2: #2a2b2f;
+  --sidebar: #151618;
+  --hover: rgba(236, 235, 231, 0.06);
+  --active: rgba(236, 235, 231, 0.11);
+
+  --text: #ecebe7;
+  --text-2: #b1b0a9;
+  --text-3: #8a8983;
+
+  --border: #33353a;
+  --border-strong: #464850;
+
+  --accent: #4fb9a3;
+  --accent-strong: #7dd0be;
+  --accent-soft: #1c2f2b;
+
+  --good: #5cc08f;
+  --good-soft: #1c2b23;
+  --warn: #e0a951;
+  --warn-soft: #2e2617;
+  --bad: #ef8a80;
+  --bad-soft: #331e1c;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
+}
+
+/* Tone helpers: any element with .tone-* exposes --tone / --tone-soft. */
+.tone-good { --tone: var(--good); --tone-soft: var(--good-soft); }
+.tone-warn { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+.tone-bad  { --tone: var(--bad);  --tone-soft: var(--bad-soft); }

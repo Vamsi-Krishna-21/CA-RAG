@@ -1,0 +1,55 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node
+node_modules/
+
+# Build files
+dist/
+build/
+
+# Python packaging
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Large ML/model files
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
+*.joblib
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
