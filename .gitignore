@@ -53,3 +53,11 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+
+# Local project archives
+backend.zip
+frontend.zip
+
+# Runtime-generated CA-RAG data
+backend/uploads/
+backend/vector_store/
