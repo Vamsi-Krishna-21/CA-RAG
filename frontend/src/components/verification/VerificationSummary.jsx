@@ -9,6 +9,7 @@ import { clampPct, statusInfo } from '../../utils/verification.js'
 export default function VerificationSummary({ content, mode }) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
+  const isOriginalCarag = mode === 'carag'
 
   const {
     confidence,
@@ -16,7 +17,6 @@ export default function VerificationSummary({ content, mode }) {
     hallucination_risk: risk,
     citations = [],
     evidence = [],
-    rewritten_queries = [],
   } = content
 
   const info = statusInfo(status)
@@ -37,17 +37,14 @@ export default function VerificationSummary({ content, mode }) {
           {info.label}
         </span>
 
-        <span className="verify-sep" aria-hidden="true" />
-
-        <span>
-          {clampPct(confidence)}% confidence
-        </span>
-
-        <span className="verify-sep" aria-hidden="true" />
-
-        <span>
-          {sources} {sources === 1 ? 'source' : 'sources'}
-        </span>
+        {!isOriginalCarag && (
+          <>
+            <span className="verify-sep" aria-hidden="true" />
+            <span>{clampPct(confidence)}% confidence</span>
+            <span className="verify-sep" aria-hidden="true" />
+            <span>{sources} {sources === 1 ? 'source' : 'sources'}</span>
+          </>
+        )}
 
         <Icon
           name="chevronDown"
@@ -61,17 +58,16 @@ export default function VerificationSummary({ content, mode }) {
         className="verify-panel"
         hidden={!open}
       >
-        <ConfidenceMeter
-          confidence={confidence}
-          status={status}
-          risk={risk}
-        />
+        {!isOriginalCarag && (
+          <ConfidenceMeter
+            confidence={confidence}
+            status={status}
+            risk={risk}
+          />
+        )}
 
         {mode && (
-          <PipelineSteps
-            mode={mode}
-            rewrittenQueries={rewritten_queries}
-          />
+          <PipelineSteps mode={mode} />
         )}
 
         {evidence.length > 0 && (

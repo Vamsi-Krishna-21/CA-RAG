@@ -208,6 +208,18 @@ async def delete_document(
         }
     )
 
+    # Clean up conversation references
+    await db.conversations.update_many(
+        {"user_id": current_user["id"]},
+        {"$pull": {"document_ids": document_id}},
+    )
+    await db.conversations.delete_many(
+        {
+            "user_id": current_user["id"],
+            "document_ids": {"$size": 0},
+        }
+    )
+
     if os.path.exists(doc["filepath"]):
         os.remove(doc["filepath"])
 

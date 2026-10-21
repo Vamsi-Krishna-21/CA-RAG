@@ -42,7 +42,7 @@ def _file_stamp(path: str):
 
 def load_document_index(document_id: str):
     index_path, meta_path = _paths(document_id)
-    if not os.path.exists(index_path):
+    if not os.path.exists(index_path) or not os.path.exists(meta_path):
         _INDEX_CACHE.pop(document_id, None)
         return None, []
 

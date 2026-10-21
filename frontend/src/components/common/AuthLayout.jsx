@@ -3,7 +3,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
     <main className="auth">
       <div className="auth-inner">
         <div className="auth-brand">
-          <span className="wordmark auth-wordmark">CA-RAG</span>
+          <span className="wordmark auth-wordmark">Enhance CA-RAG</span>
           <p>Context-Aware Research Assistant</p>
         </div>
         <div className="auth-card">

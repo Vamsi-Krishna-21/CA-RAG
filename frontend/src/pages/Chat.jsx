@@ -76,7 +76,7 @@ function generationToMessage(generation) {
           generation.query || '',
 
         mode:
-          generation.mode || 'carag',
+          generation.mode || 'enhanced_carag',
       },
     }
   }
@@ -106,7 +106,7 @@ function generationToMessage(generation) {
 
     mode:
       generation.mode ||
-      'carag',
+      'enhanced_carag',
 
     content: {
       answer:
@@ -152,6 +152,11 @@ function generationToMessage(generation) {
 
       progress:
         generation.progress ?? null,
+
+      response_time:
+        typeof generation.response_time === 'number'
+          ? generation.response_time
+          : null,
 
       message_id:
         generation.message_id ||
@@ -608,7 +613,7 @@ export default function Chat() {
   const [
     mode,
     setMode,
-  ] = useState('carag')
+  ] = useState('enhanced_carag')
 
   const [
     messages,
@@ -944,6 +949,41 @@ export default function Chat() {
       messages,
       currentGeneration,
     ])
+
+  useEffect(() => {
+    if (
+      currentGeneration?.status !== 'completed' ||
+      !currentGeneration.message_id
+    ) {
+      return
+    }
+
+    const completedMessage =
+      generationToMessage(currentGeneration)
+
+    if (!completedMessage) {
+      return
+    }
+
+    setMessages((current) => {
+      if (
+        current.some(
+          (message) =>
+            getMessageId(message) ===
+            currentGeneration.message_id,
+        )
+      ) {
+        return current
+      }
+
+      return [
+        ...current,
+        completedMessage,
+      ]
+    })
+  }, [
+    currentGeneration,
+  ])
 
 
   /* ---------------------------------------------------------------------- */

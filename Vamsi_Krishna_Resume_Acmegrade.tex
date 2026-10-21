@@ -1,0 +1,136 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\renewcommand{\familydefault}{\sfdefault}
+
+\usepackage[left=0.6in, right=0.6in, top=0.32in, bottom=0.32in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{amssymb}
+\usepackage{colortbl}
+\usepackage{textcomp}
+
+% Reference styling colors
+\definecolor{navy}{RGB}{25, 53, 93}
+\definecolor{linkblue}{RGB}{43, 108, 176}
+\definecolor{bodytext}{RGB}{44, 55, 71}
+\definecolor{tableheader}{RGB}{237, 242, 247}
+\definecolor{tableborder}{RGB}{45, 55, 72}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkblue,
+    urlcolor=linkblue
+}
+
+\color{bodytext}
+\pagestyle{empty}
+
+% Section formatting
+\newcommand{\resumesection}[1]{
+    \vspace{5pt}
+    {\large \bfseries \color{navy} \MakeUppercase{#1}}
+    \vspace{1.5pt}
+    \hrule height 0.4pt
+    \vspace{3.5pt}
+}
+
+% Bullet formatting
+\setlist[itemize]{
+    label={\tiny$\blacksquare$},
+    leftmargin=1.3em,
+    itemsep=1.2pt,
+    topsep=1.5pt,
+    parsep=0pt
+}
+
+\begin{document}
+
+% Header
+\begin{center}
+    {\fontsize{23}{27}\selectfont \bfseries \color{navy} BORRA VAMSI KRISHNA} \\[3.5pt]
+    \small \href{mailto:vamsikrishna212006@gmail.com}{vamsikrishna212006@gmail.com} $\cdot$ Phone: +91 8919401258 $\cdot$ \href{https://www.linkedin.com/in/vamsi-krishna-borra-957a24353/}{Linkedin} $\cdot$ \href{https://github.com/Vamsi-Krishna-21}{Github} \\[2pt]
+    \small Flat No 132-122/2, 8\textsuperscript{th} lane Dwaraka Nagar, Nagaralu, Guntur 522007 - AP (Open to Bengaluru)
+\end{center}
+
+% Professional Summary
+\resumesection{Professional Summary}
+\noindent
+\small
+Detail-oriented Computer Science undergraduate with hands-on experience in Full-Stack Development and Generative AI / RAG architectures. Proficient in building robust REST APIs with FastAPI and Node.js/Express, creating responsive frontends with React, and managing MongoDB databases. Demonstrates strong problem-solving skills, solid understanding of Data Structures \& Algorithms, and rapid adaptability to collaborative engineering environments.
+
+% Academics
+\resumesection{Academics}
+
+\noindent
+\renewcommand{\arraystretch}{1.2}
+\arrayrulecolor{tableborder}
+\begin{tabularx}{\textwidth}{|>{\bfseries}p{0.14\textwidth}|X|p{0.32\textwidth}|>{\centering\arraybackslash}p{0.08\textwidth}|>{\centering\arraybackslash}p{0.13\textwidth}|}
+\hline
+\rowcolor{tableheader}
+\textbf{Qualification} & \textbf{Institution} & \textbf{Examining Body} & \textbf{Score} & \textbf{Year of Passing} \\
+\hline
+B.Tech & R V R \& J C College of Engineering, Guntur & Autonomous & 7.13 & 2027 \\
+\hline
+IPE / 12\textsuperscript{th} & Narayana Junior College, Kurnool & Board of Intermediate Education, Andhra Pradesh & 87\% & 2023 \\
+\hline
+SSC / 10\textsuperscript{th} & Good Shepherd English Medium School, Nandyal & Board Of Secondary Education, Andhra Pradesh & 6.7 & 2021 \\
+\hline
+\end{tabularx}
+
+% Technical Skill Set
+\resumesection{Technical Skill Set}
+
+\begin{itemize}
+    \item \textbf{Programming Languages:} Python, Java, C, JavaScript.
+    \item \textbf{Backend Technologies:} FastAPI, Node.js, Express.js, RESTful APIs, JWT Authentication.
+    \item \textbf{Frontend Technologies:} React.js, HTML5, CSS3, JavaScript (ES6+).
+    \item \textbf{AI \& Generative Tools:} Retrieval-Augmented Generation (RAG), LLMs (Ollama / OpenAI), FAISS, Vector Embeddings.
+    \item \textbf{Databases:} MongoDB, NoSQL Schema Design.
+    \item \textbf{Developer Tools:} Git, GitHub, VS Code, Postman, Docker.
+    \item \textbf{Core CS Concepts:} Data Structures \& Algorithms, Object-Oriented Programming (OOP), Database Systems.
+\end{itemize}
+
+% Projects
+\resumesection{Projects}
+
+\noindent
+\textbf{\large Context-Aware Retrieval Augmented Generation (CA-RAG)} \hfill \href{https://github.com/Vamsi-Krishna-21/CA-RAG}{[Project Link]} \\
+\footnotesize \textcolor{gray!80!black}{Tech Stack: Python, FastAPI, React, FAISS, MongoDB, Ollama/OpenAI, Docker $|$ Academic / Hackathon}
+\begin{itemize}
+    \item Engineered a full-stack context-aware RAG system using FastAPI and React to query multi-document PDFs with hallucination detection and context consistency validation.
+    \item Designed a high-performance vector retrieval pipeline using FAISS embeddings, dynamic chunking, and query rewriting to maximize semantic precision.
+    \item Implemented secure user access using JWT authentication with bcrypt and containerized the microservices via Docker for scalable deployment.
+\end{itemize}
+
+\vspace{1pt}
+\noindent
+\textbf{\large Secure Authentication \& User Management System} \hfill \href{https://github.com/Vamsi-Krishna-21}{[Project Link]} \\
+\footnotesize \textcolor{gray!80!black}{Tech Stack: Node.js, Express.js, MongoDB, JavaScript, HTML5/CSS3 $|$ Self-Project}
+\begin{itemize}
+    \item Developed an end-to-end user authentication platform implementing secure registration, hashed password verification, and session management.
+    \item Architected MongoDB database schemas for efficient credential storage and data indexing, preventing unauthorized access attempts.
+    \item Constructed a responsive, clean frontend interface with real-time client-side and server-side validation feedback.
+\end{itemize}
+
+% Certifications
+\resumesection{Certifications}
+
+\begin{itemize}
+    \item \textbf{Public Speaking}, from NPTEL \hfill [October 2025]
+    \item \textbf{Human Computer Interaction}, from NPTEL \hfill [April 2026]
+    \item \textbf{Quantum Fundamentals}, From Wiser \hfill [February 2026]
+\end{itemize}
+
+% Soft Skills
+\resumesection{Soft Skills}
+
+\noindent
+\small
+$\circ$ Problem Solving \& Analytical Thinking, Technical Communication, Team Collaboration, Time Management \& Adaptability.
+
+\end{document}

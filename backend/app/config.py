@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     # Set to 1 to reproduce the original strictly sequential behaviour.
     carag_validation_concurrency: int = 4
 
+    # Number of candidate chunks retrieved for CA-RAG validation.
+    carag_candidate_pool_size: int = 6
+
+    # Comma-separated allowed CORS origins in addition to frontend_url.
+    cors_origins: str = ""
+
     vector_store_dir: str = "./vector_store"
     upload_dir: str = "./uploads"
 

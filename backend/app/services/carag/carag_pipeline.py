@@ -170,3 +170,11 @@ async def run_carag_validation(
     )
 
     return validated
+
+
+def select_best_validated_candidate(validated_candidates: list) -> dict | None:
+    """Return the highest-ranked accepted candidate, if one exists."""
+    if not validated_candidates:
+        return None
+
+    return validated_candidates[0]

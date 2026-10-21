@@ -3,6 +3,7 @@ Wraps sentence-transformers so the rest of the app just calls embed_text() /
 embed_batch() without knowing which model is loaded. Model loads once and is
 reused (loading it per-request would be far too slow).
 """
+import asyncio
 from functools import lru_cache
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -31,3 +32,11 @@ def embed_text(text: str) -> np.ndarray:
 def embed_batch(texts):
     model = _get_model()
     return model.encode(texts, normalize_embeddings=True, batch_size=32, show_progress_bar=False)
+
+
+async def async_embed_text(text: str) -> np.ndarray:
+    return await asyncio.to_thread(embed_text, text)
+
+
+async def async_embed_batch(texts) -> np.ndarray:
+    return await asyncio.to_thread(embed_batch, texts)

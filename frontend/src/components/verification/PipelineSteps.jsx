@@ -1,24 +1,16 @@
 import Icon from '../common/Icon.jsx'
 import { PIPELINE } from '../../utils/verification.js'
 
-export default function PipelineSteps({
-  mode,
-  rewrittenQueries = [],
-}) {
-  const queryRewriteUsed = rewrittenQueries.length > 0
-
+export default function PipelineSteps({ mode }) {
   return (
     <div className="pipeline">
-      <h4 className="panel-heading">Features used</h4>
+      <h4 className="panel-heading">
+        {mode === 'carag' ? 'Features Used' : 'Features used'}
+      </h4>
 
       <ul>
         {PIPELINE.map((step) => {
-          // Query Rewriting is determined by the actual response.
-          // All other features continue to use the selected mode.
-          const ran =
-            step.key === 'query_rewrite'
-              ? queryRewriteUsed
-              : step.modes.includes(mode)
+          const ran = step.modes.includes(mode)
 
           return (
             <li

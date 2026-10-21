@@ -8,7 +8,7 @@ class ChatRequest(BaseModel):
     document_id: Optional[str] = None
     document_ids: List[str] = Field(default_factory=list)
     query: str
-    mode: str = "carag"
+    mode: str = "enhanced_carag"
 
 
 class Citation(BaseModel):
@@ -33,6 +33,7 @@ class ChatResponse(BaseModel):
     evidence: List[EvidenceItem]
 
     mode: Optional[str] = None
+    response_time: Optional[float] = None
     verification: Optional[Dict[str, Any]] = None
     conversation_id: Optional[str] = None
     message_id: Optional[str] = None

@@ -50,11 +50,19 @@ SUPPORTED_EXTENSIONS = {
 }
 
 
-LIBREOFFICE_PATH = r"C:\Program Files\LibreOffice\program\soffice.exe"
+LIBREOFFICE_PATH = os.getenv(
+    "LIBREOFFICE_PATH",
+    r"C:\Program Files\LibreOffice\program\soffice.exe",
+)
 
 
 def _extract_docx(filepath: str) -> list:
-    from docx import Document
+    try:
+        from docx import Document
+    except ImportError:
+        raise RuntimeError(
+            "python-docx is required for .docx files. Please install it with `pip install python-docx`."
+        )
 
     document = Document(filepath)
     texts = []
@@ -92,7 +100,12 @@ def _extract_docx(filepath: str) -> list:
 
 
 def _extract_pptx(filepath: str) -> list:
-    from pptx import Presentation
+    try:
+        from pptx import Presentation
+    except ImportError:
+        raise RuntimeError(
+            "python-pptx is required for .pptx files. Please install it with `pip install python-pptx`."
+        )
 
     presentation = Presentation(filepath)
     pages = []
@@ -136,8 +149,9 @@ def _convert_ppt_to_pptx(filepath: str) -> str:
 
     if not os.path.isfile(LIBREOFFICE_PATH):
         raise RuntimeError(
-            "LibreOffice was not found at: "
-            f"{LIBREOFFICE_PATH}"
+            f"LibreOffice was not found at '{LIBREOFFICE_PATH}'. "
+            "LibreOffice is required to convert legacy .ppt files to .pptx. "
+            "Please install LibreOffice or set the LIBREOFFICE_PATH environment variable."
         )
 
     filepath = os.path.abspath(filepath)
@@ -252,7 +266,12 @@ def _extract_ppt(filepath: str) -> list:
 
 
 def _extract_xlsx(filepath: str) -> list:
-    from openpyxl import load_workbook
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        raise RuntimeError(
+            "openpyxl is required for .xlsx files. Please install it with `pip install openpyxl`."
+        )
 
     workbook = load_workbook(
         filepath,
@@ -296,7 +315,12 @@ def _extract_xlsx(filepath: str) -> list:
 
 
 def _extract_xls(filepath: str) -> list:
-    import xlrd
+    try:
+        import xlrd
+    except ImportError:
+        raise RuntimeError(
+            "xlrd is required for .xls files. Please install it with `pip install xlrd`."
+        )
 
     workbook = xlrd.open_workbook(filepath)
     pages = []

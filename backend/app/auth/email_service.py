@@ -24,7 +24,7 @@ def send_password_reset_email(to_email: str, reset_link: str) -> None:
     msg["From"] = settings.email_user
     msg["To"] = to_email
     msg.set_content(
-        "Click this link to reset your CA-RAG password:\n\n"
+        "Click this link to reset your Enhance CA-RAG password:\n\n"
         f"{reset_link}\n\n"
         f"This link expires in {settings.reset_token_expire_minutes} minutes.\n"
         "If you did not request this, you can ignore this email."

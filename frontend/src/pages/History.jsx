@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import ErrorNotice from '../components/common/ErrorNotice.jsx'
 import Skeleton from '../components/common/Skeleton.jsx'
 import { useDocuments } from '../hooks/useDocuments.jsx'
-import { getHistory } from '../services/chatApi'
+import { listConversations } from '../services/conversationApi'
 import { dayGroup, formatTime, parseServerDate } from '../utils/dates'
 import { describeError } from '../utils/errors'
 
@@ -18,51 +18,50 @@ export default function History() {
 
   const docKey = docs.map((d) => d.id).join(',')
 
-  // There is no "list conversations" endpoint: history is stored per document,
-  // so fetch each document's messages and list the questions asked.
   useEffect(() => {
     if (docsLoading) return undefined
-    if (docs.length === 0) {
-      setItems([])
-      setState('ready')
-      return undefined
-    }
     let cancelled = false
     setState('loading')
-    Promise.allSettled(docs.map((d) => getHistory(d.id))).then((results) => {
-      if (cancelled) return
-      const collected = []
-      let failures = 0
-      results.forEach((r, i) => {
-        if (r.status !== 'fulfilled') {
-          failures += 1
-          return
-        }
-        r.value
-          .filter((m) => m.role === 'user')
-          .forEach((m) =>
-            collected.push({
-              id: m.id,
-              text: m.content?.query || '',
-              createdAt: m.created_at,
-              docId: docs[i].id,
-              docName: docs[i].filename,
-            }),
-          )
+
+    listConversations()
+      .then((conversations) => {
+        if (cancelled) return
+        const docsMap = new Map(docs.map((d) => [d.id, d.filename]))
+        const collected = (conversations || []).map((conv) => {
+          const docId = conv.document_ids?.[0] || ''
+          const docNames = conv.document_ids?.length
+            ? conv.document_ids
+                .map((id) => docsMap.get(id) || 'Document')
+                .join(', ')
+            : 'No documents'
+
+          return {
+            id: conv.id,
+            conversationId: conv.id,
+            text: conv.title || 'Untitled conversation',
+            createdAt: conv.updated_at || conv.created_at,
+            docId,
+            docName: docNames,
+          }
+        })
+
+        collected.sort(
+          (a, b) =>
+            (parseServerDate(b.createdAt) || 0) -
+            (parseServerDate(a.createdAt) || 0),
+        )
+        setItems(collected)
+        setState('ready')
       })
-      if (failures === results.length) {
-        setError(describeError(results[0].reason, 'Could not load your history.'))
+      .catch((err) => {
+        if (cancelled) return
+        setError(describeError(err, 'Could not load your conversations.'))
         setState('error')
-        return
-      }
-      collected.sort((a, b) => (parseServerDate(b.createdAt) || 0) - (parseServerDate(a.createdAt) || 0))
-      setItems(collected)
-      setState('ready')
-    })
+      })
+
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docsLoading, docKey, reloadKey])
 
   const grouped = useMemo(() => {
@@ -98,7 +97,14 @@ export default function History() {
         <ul>
           {grouped[g].map((it) => (
             <li key={it.id}>
-              <Link className="history-item" to={`/?document=${it.docId}&message=${it.id}`}>
+              <Link
+                className="history-item"
+                to={
+                  it.conversationId
+                    ? `/?conversation=${it.conversationId}${it.docId ? `&document=${it.docId}` : ''}`
+                    : `/?document=${it.docId}&message=${it.id}`
+                }
+              >
                 <span className="history-text">{it.text}</span>
                 <span className="history-meta">
                   <span className="history-doc">{it.docName}</span>

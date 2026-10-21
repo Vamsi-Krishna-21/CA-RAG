@@ -16,6 +16,7 @@ Supports:
 - Preserving the query variant that matched each chunk
 """
 
+from app.config import settings
 from app.services.embeddings import embed_text
 from app.services import vector_store
 from app.services.retrieval.ranking import (
@@ -25,12 +26,18 @@ from app.services.retrieval.ranking import (
 from app.services.feedback.feedback_learning import (
     get_feedback_boost,
 )
+from app.services.rag_modes import (
+    ENHANCED_CARAG_MODE,
+    TRADITIONAL_RAG_MODE,
+    normalize_rag_mode,
+)
 
 
 async def retrieve_candidates(
     document_ids: str | list[str],
     query_bundle: dict,
-    top_k: int = 12,
+    top_k: int | None = None,
+    mode: str = TRADITIONAL_RAG_MODE,
 ):
     """
     Retrieve candidate chunks from one or more documents.
@@ -49,6 +56,10 @@ async def retrieve_candidates(
     top_k:
         Maximum number of candidates returned globally.
 
+    mode:
+        Canonical mode or supported alias. Feedback affects retrieval only
+        for Enhance CA-RAG; omitted mode defaults to normal retrieval.
+
     Returns
     -------
     list[dict]
@@ -64,6 +75,9 @@ async def retrieve_candidates(
         - section
         - text
     """
+    mode = normalize_rag_mode(mode)
+    if top_k is None:
+        top_k = settings.carag_candidate_pool_size
 
     # ------------------------------------------------------------------
     # Normalize document IDs
@@ -216,21 +230,14 @@ async def retrieve_candidates(
                     chunk_id,
                 )
 
-                if (
-                    boost_key
-                    not in boost_cache
-                ):
-                    boost_cache[
-                        boost_key
-                    ] = await get_feedback_boost(
-                        chunk_id
-                    )
-
-                feedback_boost = (
-                    boost_cache[
-                        boost_key
-                    ]
-                )
+                if mode == ENHANCED_CARAG_MODE:
+                    if boost_key not in boost_cache:
+                        boost_cache[boost_key] = await get_feedback_boost(
+                            chunk_id
+                        )
+                    feedback_boost = boost_cache[boost_key]
+                else:
+                    feedback_boost = 0.0
 
                 # ------------------------------------------------------
                 # Combined retrieval score

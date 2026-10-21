@@ -67,7 +67,7 @@ export default function Sidebar({
       aria-label="Primary"
     >
       <div className="side-top">
-        <span className="wordmark side-brand">CA-RAG</span>
+        <span className="wordmark side-brand">Enhance CA-RAG</span>
 
         <button
           type="button"

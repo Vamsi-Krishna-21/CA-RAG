@@ -12,7 +12,7 @@ export default function Header({ onOpenMenu }) {
         <button type="button" className="icon-btn header-menu" onClick={onOpenMenu} aria-label="Open navigation">
           <Icon name="menu" />
         </button>
-        <span className="wordmark header-brand">CA-RAG</span>
+        <span className="wordmark header-brand">Enhance CA-RAG</span>
         <span className="header-tagline">Context-Aware Research Assistant</span>
       </div>
       <div className="header-right">

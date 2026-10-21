@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -11,13 +12,24 @@ from app.database.mongodb import get_db
 from app.auth.authentication import get_current_user, parse_object_id
 from app.models.conversation import new_message_doc, new_conversation_doc
 from app.services.query.query_rewriter import rewrite_query
+from app.services.rag_modes import (
+    CARAG_MODE,
+    TRADITIONAL_RAG_MODE,
+    normalize_rag_mode,
+)
 from app.services.retrieval.retriever import retrieve_candidates
-from app.services.carag.carag_pipeline import run_carag_validation
+from app.services.carag.carag_pipeline import (
+    run_carag_validation,
+    select_best_validated_candidate,
+)
 from app.services.synthesis.evidence_synthesis import (
     synthesize_answer,
     synthesize_answer_stream,
 )
-from app.services.hallucination.detector import analyze
+from app.services.hallucination.detector import (
+    NO_EVIDENCE_ANSWER,
+    ground_answer,
+)
 from app.services.citation.citation_generator import (
     build_citations,
     build_evidence_list,
@@ -36,9 +48,16 @@ async def _get_or_create_conversation(
 
     # Existing conversation
     if payload.conversation_id:
+        conv_oid = parse_object_id(payload.conversation_id)
+        if conv_oid is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid conversation ID.",
+            )
+
         conversation = await db.conversations.find_one(
             {
-                "_id": ObjectId(payload.conversation_id),
+                "_id": conv_oid,
                 "user_id": user_id,
             }
         )
@@ -68,6 +87,29 @@ async def _get_or_create_conversation(
     return conversation
 
 
+async def _get_previous_messages(db, conversation_id: str, current_message_id):
+    """Return the most recent valid prior messages for a conversation."""
+    cursor = db.messages.find(
+        {
+            "conversation_id": conversation_id,
+            "_id": {"$ne": current_message_id},
+        }
+    ).sort("created_at", -1).limit(10)
+
+    messages = []
+    async for message in cursor:
+        messages.append(
+            {
+                "role": message.get("role"),
+                "content": message.get("content"),
+                "created_at": message.get("created_at"),
+            }
+        )
+
+    messages.reverse()
+    return messages
+
+
 # ---------------------------------------------------------------------------
 # Normal POST /api/chat
 # ---------------------------------------------------------------------------
@@ -77,6 +119,8 @@ async def chat(
     payload: ChatRequest,
     current_user: dict = Depends(get_current_user),
 ):
+    payload.mode = normalize_rag_mode(payload.mode)
+    start_time = time.perf_counter()
     db = get_db()
 
     # Preserve the conversation context that the frontend sends, while still
@@ -125,7 +169,7 @@ async def chat(
     conversation_id = str(conversation["_id"])
 
     # Save user message.
-    await db.messages.insert_one(
+    saved_user_message = await db.messages.insert_one(
         new_message_doc(
             current_user["id"],
             primary_document_id,
@@ -138,11 +182,17 @@ async def chat(
         )
     )
 
+    previous_messages = await _get_previous_messages(
+        db,
+        conversation_id,
+        saved_user_message.inserted_id,
+    )
+
     # ------------------------------------------------------------------
-    # Traditional RAG
+    # Mode dispatcher
     # ------------------------------------------------------------------
 
-    if payload.mode == "traditional":
+    if payload.mode == TRADITIONAL_RAG_MODE:
         # Plain retrieval -> LLM -> answer.
         # No query rewriting.
         # No CA-RAG validation gate.
@@ -155,6 +205,7 @@ async def chat(
         candidates = await retrieve_candidates(
             document_ids,
             query_bundle,
+            mode=payload.mode,
         )
 
         validated = [
@@ -168,26 +219,45 @@ async def chat(
 
         rewritten_queries = []
 
-    # ------------------------------------------------------------------
-    # Full CA-RAG
-    # ------------------------------------------------------------------
+    elif payload.mode == CARAG_MODE:
+        query_bundle = {
+            "original_query": payload.query,
+            "rewritten_queries": [],
+            "keywords": [],
+        }
+
+        candidates = await retrieve_candidates(
+            document_ids,
+            query_bundle,
+            mode=payload.mode,
+        )
+
+        validated = await run_carag_validation(
+            payload.query,
+            candidates,
+        )
+
+        rewritten_queries = []
 
     else:
-        # Query rewriting.
-        query_bundle = await rewrite_query(payload.query)
+        # Current enhanced pipeline: query rewriting + retrieval +
+        # CA-RAG validation + evidence synthesis + verification.
+        query_bundle = await rewrite_query(
+            payload.query,
+            conversation_history=previous_messages,
+        )
 
         rewritten_queries = query_bundle.get(
             "rewritten_queries",
             [],
         )
 
-        # Retrieval.
         candidates = await retrieve_candidates(
             document_ids,
             query_bundle,
+            mode=payload.mode,
         )
 
-        # CA-RAG candidate generation + similarity validation.
         validated = await run_carag_validation(
             payload.query,
             candidates,
@@ -197,38 +267,56 @@ async def chat(
     # Evidence synthesis
     # ------------------------------------------------------------------
 
-    answer = await synthesize_answer(
-        payload.query,
-        validated,
-    )
+    if payload.mode == CARAG_MODE:
+        selected_candidate = select_best_validated_candidate(validated)
+        answer = (
+            selected_candidate.get("answer", "").strip()
+            if selected_candidate
+            else NO_EVIDENCE_ANSWER
+        )
+        answer = answer or NO_EVIDENCE_ANSWER
+    else:
+        answer = await synthesize_answer(
+            payload.query,
+            validated,
+        )
 
     # ------------------------------------------------------------------
     # Verification
     # ------------------------------------------------------------------
 
-    analysis = analyze(
-        answer,
-        validated,
-    )
+    if payload.mode == CARAG_MODE:
+        analysis = {
+            "confidence": 0,
+            "status": "CA_RAG_VALIDATED" if validated else "INSUFFICIENT_EVIDENCE",
+            "hallucination_risk": 0.0,
+            "verification": None,
+        }
+    else:
+        answer, analysis = ground_answer(
+            answer,
+            validated,
+        )
 
     # ------------------------------------------------------------------
     # Citations and evidence
     # ------------------------------------------------------------------
 
     citations = []
-    for document in documents:
-        document_candidates = [
-            candidate
-            for candidate in validated
-            if candidate.get("document_id") == str(document["_id"])
-        ]
-        if document_candidates:
-            citations.extend(
-                build_citations(
-                    document["filename"],
-                    document_candidates,
+    if payload.mode != CARAG_MODE:
+        for document in documents:
+            document_candidates = [
+                candidate
+                for candidate in validated
+                if candidate.get("document_id") == str(document["_id"])
+            ]
+            if document_candidates:
+                citations.extend(
+                    build_citations(
+                        document["filename"],
+                        document_candidates,
+                    )
                 )
-            )
 
     evidence = build_evidence_list(
         validated,
@@ -246,6 +334,7 @@ async def chat(
         citations=citations,
         evidence=evidence,
         mode=payload.mode,
+        response_time=round(time.perf_counter() - start_time, 2),
         verification=analysis.get("verification"),
         conversation_id=conversation_id,
         rewritten_queries=rewritten_queries,
@@ -270,7 +359,7 @@ async def chat(
 # ---------------------------------------------------------------------------
 # Streaming variant of POST /api/chat
 #
-# Same CA-RAG pipeline:
+# Same mode-specific answer pipelines:
 #
 # rewrite
 #     ↓
@@ -278,14 +367,14 @@ async def chat(
 #     ↓
 # CA-RAG validation
 #     ↓
-# evidence synthesis
+# select candidate (CA-RAG modes) / synthesize (Traditional RAG)
 #     ↓
 # hallucination detection / confidence
 #     ↓
 # citations / evidence
 #
 # Difference:
-# The final synthesis answer is streamed token by token.
+# Only the finalized, grounded answer is emitted as token events.
 # ---------------------------------------------------------------------------
 
 logger = logging.getLogger(__name__)
@@ -360,6 +449,8 @@ async def chat_stream(
     payload: ChatRequest,
     current_user: dict = Depends(get_current_user),
 ):
+    payload.mode = normalize_rag_mode(payload.mode)
+    start_time = time.perf_counter()
     db = get_db()
 
     # Resolve document scope.
@@ -417,7 +508,7 @@ async def chat_stream(
     primary_document_id = document_ids[0]
 
     # Save user message.
-    await db.messages.insert_one(
+    saved_user_message = await db.messages.insert_one(
         new_message_doc(
             current_user["id"],
             primary_document_id,
@@ -430,6 +521,12 @@ async def chat_stream(
         )
     )
 
+    previous_messages = await _get_previous_messages(
+        db,
+        conversation_id,
+        saved_user_message.inserted_id,
+    )
+
     async def event_stream():
 
         pending: list = []
@@ -437,10 +534,10 @@ async def chat_stream(
         try:
 
             # ==========================================================
-            # TRADITIONAL RAG
+            # MODE DISPATCHER
             # ==========================================================
 
-            if payload.mode == "traditional":
+            if payload.mode == TRADITIONAL_RAG_MODE:
 
                 yield _sse(
                     "stage",
@@ -459,6 +556,7 @@ async def chat_stream(
                     retrieve_candidates(
                         document_ids,
                         query_bundle,
+                        mode=payload.mode,
                     )
                 )
 
@@ -480,9 +578,71 @@ async def chat_stream(
 
                 rewritten_queries = []
 
-            # ==========================================================
-            # CA-RAG
-            # ==========================================================
+            elif payload.mode == CARAG_MODE:
+
+                query_bundle = {
+                    "original_query": payload.query,
+                    "rewritten_queries": [],
+                    "keywords": [],
+                }
+
+                yield _sse(
+                    "stage",
+                    {
+                        "stage": "retrieving",
+                    },
+                )
+
+                task = asyncio.create_task(
+                    retrieve_candidates(
+                        document_ids,
+                        query_bundle,
+                        mode=payload.mode,
+                    )
+                )
+
+                pending.append(task)
+
+                async for frame in _wait_for(task):
+                    yield frame
+
+                candidates = task.result()
+
+                yield _sse(
+                    "stage",
+                    {
+                        "stage": "validating",
+                        "total": len(candidates),
+                    },
+                )
+
+                queue: asyncio.Queue = asyncio.Queue()
+
+                task = asyncio.create_task(
+                    run_carag_validation(
+                        payload.query,
+                        candidates,
+                        on_progress=lambda done, total:
+                            queue.put_nowait(
+                                {
+                                    "done": done,
+                                    "total": total,
+                                }
+                            ),
+                    )
+                )
+
+                pending.append(task)
+
+                async for frame in _wait_for(
+                    task,
+                    queue,
+                ):
+                    yield frame
+
+                validated = task.result()
+
+                rewritten_queries = []
 
             else:
 
@@ -500,6 +660,7 @@ async def chat_stream(
                 task = asyncio.create_task(
                     rewrite_query(
                         payload.query,
+                        conversation_history=previous_messages,
                     )
                 )
 
@@ -544,6 +705,7 @@ async def chat_stream(
                     retrieve_candidates(
                         document_ids,
                         query_bundle,
+                        mode=payload.mode,
                     )
                 )
 
@@ -603,23 +765,24 @@ async def chat_stream(
                 },
             )
 
-            parts: list = []
-
-            async for piece in synthesize_answer_stream(
-                payload.query,
-                validated,
-            ):
-                parts.append(piece)
-
-                # Send answer token immediately.
-                yield _sse(
-                    "token",
-                    {
-                        "text": piece,
-                    },
+            if payload.mode == CARAG_MODE:
+                selected_candidate = select_best_validated_candidate(
+                    validated
                 )
-
-            answer = "".join(parts)
+                answer = (
+                    selected_candidate.get("answer", "").strip()
+                    if selected_candidate
+                    else NO_EVIDENCE_ANSWER
+                )
+                answer = answer or NO_EVIDENCE_ANSWER
+            else:
+                parts: list = []
+                async for piece in synthesize_answer_stream(
+                    payload.query,
+                    validated,
+                ):
+                    parts.append(piece)
+                answer = "".join(parts)
 
             # ==========================================================
             # 5. Verification
@@ -632,31 +795,50 @@ async def chat_stream(
                 },
             )
 
-            analysis = analyze(
-                answer,
-                validated,
-            )
+            if payload.mode == CARAG_MODE:
+                analysis = {
+                    "confidence": 0,
+                    "status": "CA_RAG_VALIDATED" if validated else "INSUFFICIENT_EVIDENCE",
+                    "hallucination_risk": 0.0,
+                    "verification": None,
+                }
+            else:
+                answer, analysis = ground_answer(
+                    answer,
+                    validated,
+                )
+
+            # Emit only the finalized grounded answer so the streamed text
+            # always matches the persisted response.
+            chunk_size = 32
+            for offset in range(0, len(answer), chunk_size):
+                yield _sse(
+                    "token",
+                    {
+                        "text": answer[offset:offset + chunk_size],
+                    },
+                )
 
             # ==========================================================
             # 6. Citations
             # ==========================================================
 
             citations = []
+            if payload.mode != CARAG_MODE:
+                for document in documents:
+                    document_candidates = [
+                        candidate
+                        for candidate in validated
+                        if candidate.get("document_id") == str(document["_id"])
+                    ]
 
-            for document in documents:
-                document_candidates = [
-                    candidate
-                    for candidate in validated
-                    if candidate.get("document_id") == str(document["_id"])
-                ]
-
-                if document_candidates:
-                    citations.extend(
-                        build_citations(
-                            document["filename"],
-                            document_candidates,
+                    if document_candidates:
+                        citations.extend(
+                            build_citations(
+                                document["filename"],
+                                document_candidates,
+                            )
                         )
-                    )
 
             # ==========================================================
             # 7. Evidence
@@ -678,7 +860,9 @@ async def chat_stream(
                 citations=citations,
                 evidence=evidence,
                 mode=payload.mode,
+                response_time=round(time.perf_counter() - start_time, 2),
                 verification=analysis.get("verification"),
+                conversation_id=conversation_id,
                 rewritten_queries=rewritten_queries,
             )
 
@@ -703,6 +887,7 @@ async def chat_stream(
             response_dict = response.model_dump()
             response_dict["conversation_id"] = conversation_id
             response_dict["message_id"] = str(saved.inserted_id)
+            response_dict["response_time"] = response.response_time
 
             yield _sse(
                 "done",
@@ -768,21 +953,29 @@ async def chat_stream(
 
 @router.get("/history")
 async def chat_history(
-    document_id: str,
+    document_id: str | None = None,
     conversation_id: str | None = None,
     current_user: dict = Depends(get_current_user),
 ):
+    if not document_id and not conversation_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Either document_id or conversation_id must be provided.",
+        )
+
     db = get_db()
 
-    query = {
+    query: dict = {
         "user_id": current_user["id"],
-        "document_id": document_id,
     }
 
-    # If a conversation ID is supplied, return only
-    # messages belonging to that conversation.
     if conversation_id:
         query["conversation_id"] = conversation_id
+        if document_id:
+            query["document_id"] = document_id
+    else:
+        query["document_id"] = document_id
+        query["conversation_id"] = None
 
     cursor = db.messages.find(query).sort(
         "created_at",

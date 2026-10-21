@@ -353,7 +353,7 @@ export function ChatGenerationProvider({ children }) {
       documentIds = [],
       conversationId = null,
       query,
-      mode = 'carag',
+      mode = 'enhanced_carag',
       generationId = null,
     }) => {
       const normalizedDocumentIds = normalizeDocumentIds(
@@ -459,6 +459,8 @@ export function ChatGenerationProvider({ children }) {
         verification: null,
 
         rewritten_queries: [],
+
+        response_time: null,
 
         stage: 'Starting',
 
@@ -736,6 +738,12 @@ export function ChatGenerationProvider({ children }) {
                 : generationsRef.current.get(key)
                     ?.rewritten_queries || [],
 
+            response_time:
+              typeof data?.response_time === 'number'
+                ? data.response_time
+                : generationsRef.current.get(key)?.response_time ??
+                  null,
+
             message_id:
               data?.message_id ??
               data?.messageId ??
@@ -754,6 +762,14 @@ export function ChatGenerationProvider({ children }) {
 
             error: null,
           })
+
+          if (completed?.message_id) {
+            try {
+              rememberMode(completed.message_id, mode)
+            } catch {
+              /* Ignore storage error */
+            }
+          }
 
           /**
            * A completed generation should produce a notification only

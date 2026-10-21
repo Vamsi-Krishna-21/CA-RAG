@@ -49,7 +49,7 @@ export default function ChatEmptyState({
   return (
     <div className="empty">
       <h1 className="empty-title wordmark">
-        CA-RAG
+        Enhance CA-RAG
       </h1>
 
       <p className="empty-lead">

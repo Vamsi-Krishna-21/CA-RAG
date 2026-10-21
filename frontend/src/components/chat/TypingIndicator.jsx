@@ -2,7 +2,9 @@ export default function TypingIndicator({ mode, stage }) {
   const defaultMessage =
     mode === 'carag'
       ? 'CA-RAG is verifying the evidence…'
-      : 'Traditional RAG is verifying the evidence…'
+      : mode === 'traditional_rag'
+        ? 'Traditional RAG is verifying the evidence…'
+        : 'Enhance CA-RAG is verifying the evidence…'
 
   const message = stage || defaultMessage
 

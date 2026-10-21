@@ -9,10 +9,15 @@ export default function AssistantMessage({ message }) {
     citations = [],
     evidence = [],
     rewritten_queries = [],
+    response_time: responseTime,
   } = message.content
 
   // Live responses carry message_id; reloaded history rows use the row id.
   const messageId = message.content.message_id || message.id
+  const formattedResponseTime =
+    typeof responseTime === 'number' && Number.isFinite(responseTime)
+      ? `${responseTime.toFixed(2)}s`
+      : null
 
   return (
     <article
@@ -51,6 +56,12 @@ export default function AssistantMessage({ message }) {
         content={message.content}
         mode={message.mode}
       />
+
+      {formattedResponseTime && (
+        <div className="response-time">
+          Response time: {formattedResponseTime}
+        </div>
+      )}
 
       {messageId && (
         <FeedbackButtons

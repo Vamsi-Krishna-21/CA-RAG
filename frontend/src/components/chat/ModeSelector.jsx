@@ -1,13 +1,14 @@
 import { MODES } from '../../utils/verification.js'
 
-const ORDER = ['carag', 'traditional']
+const ORDER = ['enhanced_carag', 'carag', 'traditional_rag']
 
 export default function ModeSelector({ mode, onChange, disabled }) {
   const onKeyDown = (e) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
     e.preventDefault()
-    const i = ORDER.indexOf(mode)
-    const next = ORDER[(i + (e.key === 'ArrowRight' ? 1 : ORDER.length - 1)) % ORDER.length]
+    const currentIndex = ORDER.indexOf(mode)
+    const safeIndex = currentIndex === -1 ? 0 : currentIndex
+    const next = ORDER[(safeIndex + (e.key === 'ArrowRight' ? 1 : ORDER.length - 1)) % ORDER.length]
     onChange(next)
   }
 

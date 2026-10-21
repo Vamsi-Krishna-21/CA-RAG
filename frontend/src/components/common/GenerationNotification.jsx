@@ -59,9 +59,11 @@ export default function GenerationNotification() {
           </span>
 
           <span className="generation-notification-text">
-            Your {notification.mode === 'traditional'
+            Your {notification.mode === 'traditional_rag'
               ? 'Traditional RAG'
-              : 'CA-RAG'} response is ready.
+              : notification.mode === 'carag'
+                ? 'CA-RAG'
+                : 'Enhance CA-RAG'} response is ready.
           </span>
         </span>
       </button>

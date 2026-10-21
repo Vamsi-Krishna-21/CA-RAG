@@ -7,6 +7,7 @@ const STATUS = {
   SUPPORTED: { label: 'Supported', tone: 'good', risk: 'Low' },
   PARTIALLY_SUPPORTED: { label: 'Partially supported', tone: 'warn', risk: 'Moderate' },
   INSUFFICIENT_EVIDENCE: { label: 'Insufficient evidence', tone: 'bad', risk: 'High' },
+  CA_RAG_VALIDATED: { label: 'Similarity validated', tone: 'good', risk: null },
 }
 
 export function statusInfo(status) {
@@ -20,16 +21,23 @@ export const clampPct = (n) => Math.max(0, Math.min(100, Math.round(Number(n) ||
 // The backend reports risk as 0..1.
 export const riskPct = (risk) => clampPct((Number(risk) || 0) * 100)
 
-// Which pipeline stages run in each mode (from the backend's chat route).
+// Which features are included in each mode's displayed pipeline.
 export const PIPELINE = [
-  { key: 'rewrite', label: 'Query rewriting', modes: ['carag'] },
-  { key: 'retrieve', label: 'Evidence retrieval', modes: ['carag', 'traditional'] },
-  { key: 'validate', label: 'Similarity validation', modes: ['carag'] },
-  { key: 'check', label: 'Hallucination check', modes: ['carag', 'traditional'] },
-  { key: 'cite', label: 'Source citation', modes: ['carag', 'traditional'] },
+  { key: 'retrieve', label: 'Evidence Retrieval', modes: ['enhanced_carag', 'carag', 'traditional_rag'] },
+  { key: 'semantic_chunking', label: 'Semantic Chunking', modes: ['carag'] },
+  { key: 'candidate_generation', label: 'Multi-Candidate Answer Generation', modes: ['enhanced_carag', 'carag'] },
+  { key: 'adaptive_chunking', label: 'Adaptive Chunking', modes: ['enhanced_carag', 'traditional_rag'] },
+  { key: 'similarity_validation', label: 'Similarity Validation', modes: ['enhanced_carag', 'carag'] },
+  { key: 'answer_selection', label: 'Best Candidate Selection', modes: ['enhanced_carag', 'carag'] },
+  { key: 'query_rewrite', label: 'Query Rewriting', modes: ['enhanced_carag'] },
+  { key: 'check', label: 'Hallucination Detection', modes: ['enhanced_carag', 'traditional_rag'] },
+  { key: 'confidence', label: 'Confidence Scoring', modes: ['enhanced_carag', 'traditional_rag'] },
+  { key: 'cite', label: 'Source Citation', modes: ['enhanced_carag', 'traditional_rag'] },
+  { key: 'feedback', label: 'Feedback Learning', modes: ['enhanced_carag'] },
 ]
 
 export const MODES = {
-  carag: { label: 'CA-RAG', hint: 'Verification + citations' },
-  traditional: { label: 'Traditional RAG', hint: 'Baseline retrieval' },
+  enhanced_carag: { label: 'Enhance CA-RAG', hint: 'Enhanced verification + citations' },
+  carag: { label: 'CA-RAG', hint: 'Research-paper validation' },
+  traditional_rag: { label: 'Traditional RAG', hint: 'Baseline retrieval' },
 }

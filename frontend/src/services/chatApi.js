@@ -13,7 +13,7 @@ import client from './axiosClient'
 export async function sendMessage(
   documentId,
   query,
-  mode = 'carag',
+  mode = 'enhanced_carag',
   documentIds = [],
   conversationId = null,
 ) {
@@ -59,7 +59,7 @@ export async function sendMessage(
 export async function streamMessage(
   documentId,
   query,
-  mode = 'carag',
+  mode = 'enhanced_carag',
   handlers = {},
   signal,
   documentIds = [],
