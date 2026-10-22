@@ -315,7 +315,7 @@ For cloud deployments, configure the backend URL through the frontend's `VITE_AP
 
 **Borra Vamsi Krishna**
 
-GitHub: [Vamsi-Krishna-21](https://github.com/Vamsi-Krishna-21)
+Portfolio: [Vamsi-Krishna-21]([https://github.com/Vamsi-Krishna-21](https://port-three-red.vercel.app/))
 
 ## License
 
