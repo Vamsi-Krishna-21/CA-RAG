@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { getApiBaseUrl } from './apiConfig'
 
-const client = axios.create({ baseURL: '/api' })
+const client = axios.create({ baseURL: getApiBaseUrl() })
 
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('carag_token')

@@ -97,6 +97,10 @@ async def retrieve_candidates(
     if not document_ids:
         return []
 
+    # Ensure all target documents have their index loaded or restored from MongoDB
+    for document_id in document_ids:
+        await vector_store.ensure_document_index(document_id)
+
     # ------------------------------------------------------------------
     # Build query variants
     # ------------------------------------------------------------------

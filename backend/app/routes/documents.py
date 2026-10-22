@@ -1,8 +1,9 @@
 import os
 import uuid
+import numpy as np
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from app.database.mongodb import get_db
-from app.models.document import new_document_doc
+from app.models.document import new_document_doc, new_chunk_doc
 from app.auth.authentication import get_current_user, parse_object_id
 from app.config import settings
 from app.services.ingestion.document_loader import (
@@ -26,6 +27,9 @@ async def _process_document(document_id: str, filepath: str):
         cleaned_pages = strip_repeated_headers_footers(raw_pages)
         chunks, embeddings = chunk_and_embed(cleaned_pages)
 
+        # Clear any stale chunk records from prior runs
+        await db.chunks.delete_many({"document_id": document_id})
+
         if len(chunks) > 0:
             chunk_meta = [
                 {
@@ -39,18 +43,46 @@ async def _process_document(document_id: str, filepath: str):
                 for c in chunks
             ]
 
+            # 1. Save local FAISS index & json sidecar (warm cache)
             vector_store.save_document_index(
                 document_id,
                 embeddings,
                 chunk_meta,
             )
 
+            # 2. Prepare chunk documents with Binary float32 embeddings
+            chunk_docs = []
+            for i, c in enumerate(chunks):
+                vec_bytes = np.ascontiguousarray(embeddings[i], dtype=np.float32).tobytes()
+                chunk_docs.append(
+                    new_chunk_doc(
+                        document_id=document_id,
+                        chunk_id=c["chunk_id"],
+                        chunk_index=i,
+                        text=c["text"],
+                        page_start=c["page_start"],
+                        page_end=c["page_end"],
+                        section=c.get("section", ""),
+                        embedding_bytes=vec_bytes,
+                    )
+                )
+
+            # 3. Persist to MongoDB chunks collection
+            await db.chunks.insert_many(chunk_docs, ordered=True)
+
+        # Mark ready only after chunks and index are successfully persisted
         await db.documents.update_one(
             {"_id": ObjectId(document_id)},
-            {"$set": {"status": "ready"}},
+            {"$set": {"status": "ready", "chunk_count": len(chunks)}},
         )
 
     except Exception:
+        # Clean up partial chunks and invalidate cache on failure
+        try:
+            await db.chunks.delete_many({"document_id": document_id})
+        except Exception:
+            pass
+        vector_store.invalidate_cache(document_id)
         await db.documents.update_one(
             {"_id": ObjectId(document_id)},
             {"$set": {"status": "failed"}},
@@ -222,6 +254,11 @@ async def delete_document(
 
     if os.path.exists(doc["filepath"]):
         os.remove(doc["filepath"])
+
+    # Clean up persisted chunk records and invalidate local memory/disk cache
+    if hasattr(db, "chunks"):
+        await db.chunks.delete_many({"document_id": document_id})
+    vector_store.invalidate_cache(document_id)
 
     for ext in (".index", ".json"):
         p = os.path.join(

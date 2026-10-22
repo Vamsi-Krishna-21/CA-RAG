@@ -1,4 +1,5 @@
 import client from './axiosClient'
+import { buildApiUrl } from './apiConfig'
 
 /**
  * Normal non-streaming chat request.
@@ -74,7 +75,7 @@ export async function streamMessage(
         ? [documentId]
         : []
 
-  const response = await fetch('/api/chat/stream', {
+  const response = await fetch(buildApiUrl('/chat/stream'), {
     method: 'POST',
 
     headers: {

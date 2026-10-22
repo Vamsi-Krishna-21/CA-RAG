@@ -77,6 +77,7 @@ class _MockDB:
         self.conversations = _MockCollection()
         self.documents = _MockCollection()
         self.feedback = _MockCollection()
+        self.chunks = _MockCollection()
 
 
 def test_invalid_conversation_id_raises_400():

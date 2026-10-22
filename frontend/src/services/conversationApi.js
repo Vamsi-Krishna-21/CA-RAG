@@ -1,6 +1,4 @@
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  ''
+import { buildApiUrl } from './apiConfig'
 
 function getToken() {
   return (
@@ -20,7 +18,7 @@ async function request(path, options = {}) {
     ...(options.headers || {}),
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(buildApiUrl(path), {
     ...options,
     headers,
   })

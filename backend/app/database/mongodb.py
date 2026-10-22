@@ -57,5 +57,17 @@ async def init_db_indexes():
         await database.feedback.create_index(
             [("message_id", 1)]
         )
+
+        # Chunks collection indexes
+        await database.chunks.create_index(
+            [("document_id", 1), ("chunk_index", 1)],
+            unique=True,
+        )
+        await database.chunks.create_index(
+            [("chunk_id", 1)]
+        )
+        await database.chunks.create_index(
+            [("document_id", 1)]
+        )
     except Exception as exc:
         logger.warning("Could not initialize MongoDB indexes: %s", exc)
