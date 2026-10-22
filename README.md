@@ -313,11 +313,9 @@ For cloud deployments, configure the backend URL through the frontend's `VITE_AP
 
 ## Author
 
-**Vamsi Krishna**
+**Borra Vamsi Krishna**
 
 GitHub: [Vamsi-Krishna-21](https://github.com/Vamsi-Krishna-21)
-
-Project Repository: [ca-rag1](https://github.com/Vamsi-Krishna-21/ca-rag1)
 
 ## License
 
